@@ -13,12 +13,10 @@
             min-height: 100vh;
         }
         
-        /* Режимы */
         .mode-phone, .mode-pc { display: none; }
         body.phone-mode .mode-phone { display: block; }
         body.pc-mode .mode-pc { display: block; }
         
-        /* Общие стили */
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .header {
             background: #0F172A;
@@ -147,6 +145,58 @@
             text-align: center;
         }
         
+        /* Модальное окно для добавления товара */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: #0F172A;
+            border-radius: 28px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+        }
+        .modal-content h3 {
+            color: white;
+            margin-bottom: 20px;
+        }
+        .modal-content input, .modal-content select {
+            width: 100%;
+            background: #1E293B;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 60px;
+            color: white;
+            margin-bottom: 12px;
+            outline: none;
+        }
+        .modal-content button {
+            background: #FF6B00;
+            border: none;
+            padding: 12px;
+            border-radius: 60px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 8px;
+        }
+        .modal-close {
+            background: #334155 !important;
+        }
+        
         /* Стили для телефона */
         .phone-container {
             max-width: 450px;
@@ -243,6 +293,10 @@
             cursor: pointer;
             z-index: 1000;
         }
+        .add-btn {
+            background: #4ADE80 !important;
+            color: #0B0F1C !important;
+        }
     </style>
 </head>
 <body>
@@ -253,7 +307,7 @@
         <div class="phone-container">
             <div class="phone-header">
                 <div class="phone-logo">📷 Ozon Сканер</div>
-                <div style="color:#94A3B8; font-size:12px; margin-top:8px;">Введите штрихкод</div>
+                <div style="color:#94A3B8; font-size:12px; margin-top:8px;">Введите штрихкод или добавьте товар</div>
             </div>
 
             <div id="phoneSyncStatus" class="sync-status">🟢 Готов к сканированию</div>
@@ -262,6 +316,7 @@
                 <div class="input-label">📱 Штрихкод или номер заказа</div>
                 <input type="text" id="codeInput" class="code-input" placeholder="Введите код..." autocomplete="off">
                 <button id="submitBtn" class="btn">✅ Отсканировать</button>
+                <button id="phoneAddBtn" class="btn add-btn" style="margin-top:8px;">➕ Добавить новый товар</button>
                 
                 <div class="keyboard">
                     <button class="key" data-key="1">1</button>
@@ -306,7 +361,10 @@
                 <div class="card">
                     <div class="card-title">
                         📥 На приёмку
-                        <button id="acceptAllBtn">✅ Принять всё</button>
+                        <div>
+                            <button id="acceptAllBtn">✅ Принять всё</button>
+                            <button id="pcAddBtn" class="add-btn">➕ Добавить товар</button>
+                        </div>
                     </div>
                     <div id="pendingList" class="list"></div>
                 </div>
@@ -314,6 +372,7 @@
                 <div class="card">
                     <div class="card-title">
                         🎁 Заказы на выдачу
+                        <button id="pcAddOrderBtn" class="add-btn">➕ Добавить заказ</button>
                     </div>
                     <div id="ordersList" class="list"></div>
                 </div>
@@ -337,6 +396,34 @@
         </div>
     </div>
 
+    <!-- Модальное окно для добавления товара -->
+    <div id="addItemModal" class="modal">
+        <div class="modal-content">
+            <h3>➕ Добавить новый товар</h3>
+            <input type="text" id="newItemName" placeholder="Название товара">
+            <input type="text" id="newItemBarcode" placeholder="Штрихкод (13 цифр)">
+            <input type="number" id="newItemPrice" placeholder="Цена">
+            <input type="number" id="newItemQuantity" placeholder="Количество" value="1">
+            <button onclick="addNewItem()">✅ Добавить на приёмку</button>
+            <button class="modal-close" onclick="closeModal()">Отмена</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно для добавления заказа -->
+    <div id="addOrderModal" class="modal">
+        <div class="modal-content">
+            <h3>🎁 Добавить заказ</h3>
+            <input type="text" id="newOrderId" placeholder="Номер заказа (OZ-1004)">
+            <input type="text" id="newOrderCustomer" placeholder="ФИО покупателя">
+            <input type="text" id="newOrderPhone" placeholder="Телефон">
+            <input type="text" id="newOrderItems" placeholder="Товары">
+            <input type="number" id="newOrderTotal" placeholder="Сумма">
+            <input type="text" id="newOrderBarcode" placeholder="Штрихкод для выдачи">
+            <button onclick="addNewOrder()">✅ Добавить заказ</button>
+            <button class="modal-close" onclick="closeOrderModal()">Отмена</button>
+        </div>
+    </div>
+
     <script>
         // ========== ДАННЫЕ ПО УМОЛЧАНИЮ ==========
         let pvzData = {
@@ -357,26 +444,13 @@
                 { id: "OZ-1003", customer: "Елена Козлова", phone: "+7 999 345-67-89", items: "Power Bank (1 шт.)", total: 2990, status: "ready", barcode: "ORD1003" }
             ],
             scans: [],
-            stats: { acceptedToday: 0, givenToday: 0, totalMoney: 0 }
+            stats: { acceptedToday: 0, givenToday: 0, totalMoney: 0 },
+            nextId: 8
         };
 
         let lastCode = '';
         let lastTime = 0;
         let phoneHistory = [];
-
-        // ========== ОПРЕДЕЛЕНИЕ РЕЖИМА ==========
-        function detectMode() {
-            const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-            if (isMobile) {
-                document.body.classList.add('phone-mode');
-                document.body.classList.remove('pc-mode');
-                initPhoneMode();
-            } else {
-                document.body.classList.add('pc-mode');
-                document.body.classList.remove('phone-mode');
-                initPCMode();
-            }
-        }
 
         // ========== ОБЩИЕ ФУНКЦИИ ==========
         function loadData() {
@@ -390,15 +464,91 @@
 
         function saveData() {
             localStorage.setItem('ozon_pvz_data', JSON.stringify(pvzData));
-            // Уведомляем другие вкладки
             localStorage.setItem('ozon_update', Date.now().toString());
+        }
+
+        // ========== ДОБАВЛЕНИЕ НОВЫХ ТОВАРОВ ==========
+        function addNewItem() {
+            const name = document.getElementById('newItemName').value;
+            const barcode = document.getElementById('newItemBarcode').value;
+            const price = parseInt(document.getElementById('newItemPrice').value);
+            const quantity = parseInt(document.getElementById('newItemQuantity').value);
+            
+            if (!name || !barcode || !price) {
+                alert("Заполните все поля!");
+                return;
+            }
+            
+            const newId = pvzData.nextId || (pvzData.pendingItems.length + pvzData.stock.length + 10);
+            pvzData.pendingItems.push({
+                id: newId,
+                name: name,
+                barcode: barcode,
+                price: price,
+                quantity: quantity
+            });
+            pvzData.nextId = newId + 1;
+            
+            saveData();
+            closeModal();
+            renderAllPC();
+            showToastPC(`✅ Товар "${name}" добавлен на приёмку`);
+            
+            // Очищаем поля
+            document.getElementById('newItemName').value = '';
+            document.getElementById('newItemBarcode').value = '';
+            document.getElementById('newItemPrice').value = '';
+            document.getElementById('newItemQuantity').value = '1';
+        }
+        
+        function addNewOrder() {
+            const id = document.getElementById('newOrderId').value;
+            const customer = document.getElementById('newOrderCustomer').value;
+            const phone = document.getElementById('newOrderPhone').value;
+            const items = document.getElementById('newOrderItems').value;
+            const total = parseInt(document.getElementById('newOrderTotal').value);
+            const barcode = document.getElementById('newOrderBarcode').value;
+            
+            if (!id || !customer || !items || !total) {
+                alert("Заполните все поля!");
+                return;
+            }
+            
+            pvzData.orders.push({
+                id: id,
+                customer: customer,
+                phone: phone || "+7 XXX XXX-XX-XX",
+                items: items,
+                total: total,
+                status: "ready",
+                barcode: barcode || id
+            });
+            
+            saveData();
+            closeOrderModal();
+            renderAllPC();
+            showToastPC(`🎁 Заказ ${id} добавлен`);
+            
+            document.getElementById('newOrderId').value = '';
+            document.getElementById('newOrderCustomer').value = '';
+            document.getElementById('newOrderPhone').value = '';
+            document.getElementById('newOrderItems').value = '';
+            document.getElementById('newOrderTotal').value = '';
+            document.getElementById('newOrderBarcode').value = '';
+        }
+        
+        function closeModal() {
+            document.getElementById('addItemModal').classList.remove('active');
+        }
+        
+        function closeOrderModal() {
+            document.getElementById('addOrderModal').classList.remove('active');
         }
 
         // ========== РЕЖИМ ТЕЛЕФОНА ==========
         function initPhoneMode() {
             loadData();
             
-            // Загружаем историю телефона
             const savedHistory = localStorage.getItem('phone_scan_history');
             if (savedHistory) phoneHistory = JSON.parse(savedHistory);
             renderPhoneHistory();
@@ -470,11 +620,10 @@
                     if (stockItem) {
                         result = { success: true, message: `📦 ${stockItem.name} - на складе (${stockItem.quantity} шт.)`, type: 'info' };
                     } else {
-                        result = { success: false, message: `⚠️ Штрихкод ${code} не найден`, type: 'error' };
+                        result = { success: false, message: `⚠️ Товар с кодом ${code} не найден. Добавьте его через "Добавить товар"`, type: 'error' };
                     }
                 }
 
-                // Сохраняем и показываем
                 saveData();
                 
                 const resultClass = result.type === 'error' ? 'result-error' : (result.type === 'accept' || result.type === 'give' ? 'result-success' : 'result-info');
@@ -509,8 +658,11 @@
                     if (code) sendScan(code);
                 }
             };
+            
+            document.getElementById('phoneAddBtn').onclick = () => {
+                document.getElementById('addItemModal').classList.add('active');
+            };
 
-            // Виртуальная клавиатура
             document.querySelectorAll('.key').forEach(btn => {
                 btn.onclick = () => {
                     if (btn.dataset.key) {
@@ -530,7 +682,6 @@
             loadData();
             renderAllPC();
 
-            // Слушаем изменения в localStorage
             window.addEventListener('storage', (e) => {
                 if (e.key === 'ozon_pvz_data' || e.key === 'ozon_update') {
                     loadData();
@@ -539,6 +690,14 @@
                     setTimeout(() => { document.getElementById('pcSyncStatus').innerHTML = '🟢 Данные синхронизируются'; }, 2000);
                 }
             });
+            
+            document.getElementById('pcAddBtn').onclick = () => {
+                document.getElementById('addItemModal').classList.add('active');
+            };
+            
+            document.getElementById('pcAddOrderBtn').onclick = () => {
+                document.getElementById('addOrderModal').classList.add('active');
+            };
         }
 
         function renderAllPC() {
@@ -725,14 +884,23 @@
         }
 
         window.toggleMode = toggleMode;
+        window.addNewItem = addNewItem;
+        window.closeModal = closeModal;
+        window.closeOrderModal = closeOrderModal;
+        window.addNewOrder = addNewOrder;
 
-        // Запуск
         const savedMode = localStorage.getItem('ozon_mode');
         if (savedMode === 'pc' && !(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent))) {
             document.body.classList.add('pc-mode');
             initPCMode();
         } else {
-            detectMode();
+            if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                document.body.classList.add('phone-mode');
+                initPhoneMode();
+            } else {
+                document.body.classList.add('pc-mode');
+                initPCMode();
+            }
         }
     </script>
 </body>
