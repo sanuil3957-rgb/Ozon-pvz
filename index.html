@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ozon ПВЗ — Панель управления</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0B0F1C;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: #0F172A;
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-icon {
+            background: #FF6B00;
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        .logo-text {
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+        }
+        .stats {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            background: #1E293B;
+            padding: 12px 24px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: #FF6B00;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #94A3B8;
+        }
+        .qr-container {
+            background: #1E293B;
+            padding: 12px 20px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        .qr-container p {
+            color: #94A3B8;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+        }
+        .card {
+            background: #0F172A;
+            border-radius: 24px;
+            padding: 20px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .card-title button {
+            background: #FF6B00;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .refresh-btn {
+            background: #334155 !important;
+        }
+        .list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .item {
+            background: #1E293B;
+            border-radius: 16px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .item-info { flex: 2; }
+        .item-name { color: white; font-weight: 600; font-size: 14px; }
+        .item-code { font-size: 11px; color: #6B7280; margin-top: 4px; }
+        .item-price { font-size: 16px; font-weight: 700; color: #FF6B00; }
+        .item-quantity { font-size: 12px; color: #4ADE80; }
+        .btn-sm {
+            background: #FF6B00;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-green { background: #4ADE80; color: #0B0F1C; }
+        .empty { text-align: center; padding: 40px; color: #4B5563; }
+        .scan-item {
+            background: #1E293B;
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        .sync-status {
+            font-size: 11px;
+            color: #4ADE80;
+            margin-top: 8px;
+            text-align: center;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">📦</div>
+            <div class="logo-text">Ozon ПВЗ</div>
+        </div>
+        <div class="stats">
+            <div class="stat-card"><div class="stat-value" id="acceptedToday">0</div><div class="stat-label">Принято сегодня</div></div>
+            <div class="stat-card"><div class="stat-value" id="givenToday">0</div><div class="stat-label">Выдано сегодня</div></div>
+            <div class="stat-card"><div class="stat-value" id="totalMoney">0</div><div class="stat-label">Выручка</div></div>
+            <div class="stat-card"><div class="stat-value" id="pendingCount">0</div><div class="stat-label">На приёмке</div></div>
+            <div class="qr-container">
+                <p>📱 Сканер для телефона</p>
+                <div id="qrcode"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="card-title">
+                📥 На приёмку
+                <button id="refreshPendingBtn" class="refresh-btn">🔄 Обновить</button>
+            </div>
+            <div id="pendingList" class="list"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                🎁 Заказы на выдачу
+                <button id="refreshOrdersBtn" class="refresh-btn">🔄 Обновить</button>
+            </div>
+            <div id="ordersList" class="list"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                📦 Склад
+                <button id="refreshStockBtn" class="refresh-btn">🔄 Обновить</button>
+            </div>
+            <div id="stockList" class="list"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                📋 История сканирований
+                <button id="clearHistoryBtn" class="refresh-btn">Очистить</button>
+            </div>
+            <div id="scansList" class="list"></div>
+        </div>
+    </div>
+    <div id="syncStatus" class="sync-status">🟢 Синхронизация с Google Sheets...</div>
+</div>
+
+<script>
+    // ========== ВАШ ID ИЗ GOOGLE ТАБЛИЦЫ ==========
+    const SPREADSHEET_ID = '1m--5AyHX4Z-IzTGLKZrtvWThLWdw47WhRtzVvDBFo14';
+    
+    // Базовый URL для API Google Sheets
+    const SHEETS_API = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
+    
+    let data = {
+        pendingItems: [],
+        stock: [],
+        orders: [],
+        scans: [],
+        stats: { acceptedToday: 0, givenToday: 0, totalMoney: 0 }
+    };
+    
+    // Генерация QR-кода для телефона
+    new QRCode(document.getElementById("qrcode"), {
+        text: `${window.location.origin}/scanner.html`,
+        width: 100,
+        height: 100
+    });
+    
+    // Загрузка данных из Google Sheets
+    async function loadFromSheets() {
+        try {
+            document.getElementById('syncStatus').innerHTML = '🔄 Загрузка данных из Google Sheets...';
+            document.getElementById('syncStatus').style.color = '#FF6B00';
+            
+            // Загружаем товары на приёмку (лист 1)
+            const pendingRes = await fetch(`${SHEETS_API}&sheet=ТоварыНаПриемку`);
+            const pendingText = await pendingRes.text();
+            const pendingJson = JSON.parse(pendingText.substring(47).slice(0, -2));
+            data.pendingItems = pendingJson.table.rows.slice(1).map(row => ({
+                id: parseInt(row.c[0]?.v),
+                name: row.c[1]?.v,
+                barcode: row.c[2]?.v,
+                price: parseInt(row.c[3]?.v),
+                quantity: parseInt(row.c[4]?.v)
+            })).filter(i => i.id);
+            
+            // Загружаем склад (лист 2)
+            const stockRes = await fetch(`${SHEETS_API}&sheet=Склад`);
+            const stockText = await stockRes.text();
+            const stockJson = JSON.parse(stockText.substring(47).slice(0, -2));
+            data.stock = stockJson.table.rows.slice(1).map(row => ({
+                id: parseInt(row.c[0]?.v),
+                name: row.c[1]?.v,
+                barcode: row.c[2]?.v,
+                price: parseInt(row.c[3]?.v),
+                quantity: parseInt(row.c[4]?.v),
+                status: 'ready'
+            })).filter(i => i.id);
+            
+            // Загружаем заказы (лист 3)
+            const ordersRes = await fetch(`${SHEETS_API}&sheet=Заказы`);
+            const ordersText = await ordersRes.text();
+            const ordersJson = JSON.parse(ordersText.substring(47).slice(0, -2));
+            data.orders = ordersJson.table.rows.slice(1).map(row => ({
+                id: row.c[0]?.v,
+                customer: row.c[1]?.v,
+                phone: row.c[2]?.v,
+                items: row.c[3]?.v,
+                total: parseInt(row.c[4]?.v),
+                status: row.c[5]?.v,
+                barcode: row.c[6]?.v
+            })).filter(o => o.id);
+            
+            // Загружаем историю сканирований (лист 4)
+            try {
+                const scansRes = await fetch(`${SHEETS_API}&sheet=Сканирования`);
+                const scansText = await scansRes.text();
+                const scansJson = JSON.parse(scansText.substring(47).slice(0, -2));
+                data.scans = scansJson.table.rows.slice(1).map(row => ({
+                    code: row.c[0]?.v,
+                    result: row.c[1]?.v,
+                    time: row.c[2]?.v
+                })).filter(s => s.code);
+            } catch(e) {
+                data.scans = [];
+            }
+            
+            // Обновляем статистику
+            data.stats.acceptedToday = data.scans.filter(s => s.result.includes('Принят')).length;
+            data.stats.givenToday = data.orders.filter(o => o.status === 'given').length;
+            data.stats.totalMoney = data.orders.filter(o => o.status === 'given').reduce((sum, o) => sum + o.total, 0);
+            
+            renderAll();
+            document.getElementById('syncStatus').innerHTML = '✅ Синхронизировано с Google Sheets';
+            document.getElementById('syncStatus').style.color = '#4ADE80';
+            setTimeout(() => {
+                document.getElementById('syncStatus').innerHTML = '🟢 Данные из Google Sheets';
+            }, 3000);
+            
+        } catch(e) {
+            console.error('Ошибка загрузки:', e);
+            document.getElementById('syncStatus').innerHTML = '⚠️ Ошибка загрузки. Проверьте публикацию таблицы';
+            document.getElementById('syncStatus').style.color = '#FF6B6B';
+            loadLocalData();
+        }
+    }
+    
+    function loadLocalData() {
+        const saved = localStorage.getItem('ozon_pvz_data');
+        if (saved) {
+            data = JSON.parse(saved);
+        }
+        renderAll();
+    }
+    
+    function saveToLocal() {
+        localStorage.setItem('ozon_pvz_data', JSON.stringify(data));
+    }
+    
+    function renderAll() {
+        renderPending();
+        renderOrders();
+        renderStock();
+        renderScans();
+        updateStats();
+    }
+    
+    function renderPending() {
+        const container = document.getElementById('pendingList');
+        if (!data.pendingItems || data.pendingItems.length === 0) {
+            container.innerHTML = '<div class="empty">✅ Нет товаров на приёмку</div>';
+            return;
+        }
+        let html = '';
+        data.pendingItems.forEach(item => {
+            html += `<div class="item">
+                        <div class="item-info">
+                            <div class="item-name">📦 ${item.name}</div>
+                            <div class="item-code">${item.barcode}</div>
+                            <div class="item-quantity">📦 ${item.quantity} шт.</div>
+                        </div>
+                        <div class="item-price">${item.price.toLocaleString()} ₽</div>
+                        <div class="item-actions">
+                            <button class="btn-sm" onclick="acceptItem(${item.id})">✅ Принять</button>
+                        </div>
+                    </div>`;
+        });
+        container.innerHTML = html;
+    }
+    
+    function renderOrders() {
+        const container = document.getElementById('ordersList');
+        const readyOrders = (data.orders || []).filter(o => o.status === 'ready');
+        if (readyOrders.length === 0) {
+            container.innerHTML = '<div class="empty">🎁 Нет заказов на выдачу</div>';
+            return;
+        }
+        let html = '';
+        readyOrders.forEach(order => {
+            html += `<div class="item">
+                        <div class="item-info">
+                            <div class="item-name">Заказ ${order.id}</div>
+                            <div class="item-code">${order.customer} • ${order.phone}</div>
+                            <div class="item-code">${order.items}</div>
+                        </div>
+                        <div class="item-price">${order.total.toLocaleString()} ₽</div>
+                        <div class="item-actions">
+                            <button class="btn-sm btn-green" onclick="giveOrder('${order.id}')">🎁 Выдать</button>
+                        </div>
+                    </div>`;
+        });
+        container.innerHTML = html;
+    }
+    
+    function renderStock() {
+        const container = document.getElementById('stockList');
+        if (!data.stock || data.stock.length === 0) {
+            container.innerHTML = '<div class="empty">📦 Склад пуст</div>';
+            return;
+        }
+        let html = '';
+        data.stock.forEach(item => {
+            html += `<div class="item">
+                        <div class="item-info">
+                            <div class="item-name">📦 ${item.name}</div>
+                            <div class="item-code">${item.barcode}</div>
+                            <div class="item-quantity">📦 ${item.quantity} шт.</div>
+                        </div>
+                        <div class="item-price">${item.price.toLocaleString()} ₽</div>
+                        <div class="item-status" style="color:#4ADE80;">✅ Готов</div>
+                    </div>`;
+        });
+        container.innerHTML = html;
+    }
+    
+    function renderScans() {
+        const container = document.getElementById('scansList');
+        if (!data.scans || data.scans.length === 0) {
+            container.innerHTML = '<div class="empty">📷 Нет сканирований</div>';
+            return;
+        }
+        let html = '';
+        data.scans.slice(0, 20).forEach(scan => {
+            let color = scan.result.includes('✅') || scan.result.includes('🎁') ? '#4ADE80' : (scan.result.includes('❌') ? '#FF6B6B' : '#FF6B00');
+            html += `<div class="scan-item">
+                        <div style="color:${color}">📷 ${scan.code}</div>
+                        <div style="color:${color}">${scan.result}</div>
+                        <div class="scan-time">${scan.time}</div>
+                    </div>`;
+        });
+        container.innerHTML = html;
+    }
+    
+    function updateStats() {
+        document.getElementById('acceptedToday').innerText = data.stats.acceptedToday || 0;
+        document.getElementById('givenToday').innerText = data.stats.givenToday || 0;
+        document.getElementById('totalMoney').innerText = (data.stats.totalMoney || 0).toLocaleString() + ' ₽';
+        document.getElementById('pendingCount').innerText = (data.pendingItems || []).length;
+    }
+    
+    window.acceptItem = function(id) {
+        const item = data.pendingItems.find(i => i.id === id);
+        if (item) {
+            data.pendingItems = data.pendingItems.filter(i => i.id !== id);
+            data.stock.push({ ...item, status: 'ready' });
+            data.stats.acceptedToday += item.quantity;
+            data.scans.unshift({ code: item.barcode, time: new Date().toLocaleTimeString(), result: `✅ Принят: ${item.name}` });
+            if (data.scans.length > 30) data.scans.pop();
+            saveToLocal();
+            renderAll();
+            showToast(`✅ ${item.name} принят`);
+        }
+    };
+    
+    window.giveOrder = function(orderId) {
+        const order = data.orders.find(o => o.id === orderId);
+        if (order && order.status === 'ready') {
+            order.status = 'given';
+            data.stats.givenToday++;
+            data.stats.totalMoney += order.total;
+            data.scans.unshift({ code: order.barcode, time: new Date().toLocaleTimeString(), result: `🎁 Выдан заказ ${order.id}` });
+            if (data.scans.length > 30) data.scans.pop();
+            saveToLocal();
+            renderAll();
+            showToast(`🎁 Заказ ${orderId} выдан`);
+        }
+    };
+    
+    function acceptAll() {
+        if (!data.pendingItems.length) return;
+        data.pendingItems.forEach(item => {
+            data.stock.push({ ...item, status: 'ready' });
+            data.stats.acceptedToday += item.quantity;
+        });
+        data.pendingItems = [];
+        saveToLocal();
+        renderAll();
+        showToast(`✅ Принято всё`);
+    }
+    
+    function clearHistory() {
+        data.scans = [];
+        saveToLocal();
+        renderScans();
+        showToast('🗑️ История очищена');
+    }
+    
+    function showToast(msg) {
+        const toast = document.createElement('div');
+        toast.innerText = msg;
+        toast.style.position = 'fixed';
+        toast.style.bottom = '20px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.background = '#1E293B';
+        toast.style.padding = '10px 20px';
+        toast.style.borderRadius = '40px';
+        toast.style.color = 'white';
+        toast.style.zIndex = '1000';
+        toast.style.borderLeft = '3px solid #FF6B00';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+    
+    document.getElementById('refreshPendingBtn').onclick = loadFromSheets;
+    document.getElementById('refreshOrdersBtn').onclick = loadFromSheets;
+    document.getElementById('refreshStockBtn').onclick = loadFromSheets;
+    document.getElementById('clearHistoryBtn').onclick = clearHistory;
+    
+    // Добавляем кнопку "Принять всё" в карточку
+    const pendingCard = document.querySelector('.card:first-child .card-title');
+    const acceptAllBtn = document.createElement('button');
+    acceptAllBtn.innerText = '✅ Принять всё';
+    acceptAllBtn.onclick = acceptAll;
+    pendingCard.appendChild(acceptAllBtn);
+    
+    loadFromSheets();
+</script>
+</body>
+</html>
