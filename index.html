@@ -3,20 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ozon ПВЗ — Сканер и панель</title>
+    <title>Ozon ПВЗ — Сканер</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: 'Inter', sans-serif;
             background: #0B0F1C;
             min-height: 100vh;
         }
         
+        /* Режимы */
         .mode-phone, .mode-pc { display: none; }
         body.phone-mode .mode-phone { display: block; }
         body.pc-mode .mode-pc { display: block; }
         
+        /* Общие стили */
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .header {
             background: #0F172A;
@@ -72,7 +75,7 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 24px;
         }
         .card {
@@ -119,7 +122,6 @@
         .item-name { color: white; font-weight: 600; font-size: 14px; }
         .item-code { font-size: 11px; color: #6B7280; margin-top: 4px; }
         .item-price { font-size: 16px; font-weight: 700; color: #FF6B00; }
-        .item-quantity { font-size: 12px; color: #4ADE80; }
         .btn-sm {
             background: #FF6B00;
             border: none;
@@ -131,81 +133,17 @@
         }
         .btn-green { background: #4ADE80; color: #0B0F1C; }
         .empty { text-align: center; padding: 40px; color: #4B5563; }
-        .scan-item {
-            background: #1E293B;
-            border-radius: 12px;
-            padding: 10px;
-            margin-bottom: 8px;
-            font-size: 12px;
-        }
-        .sync-status {
-            font-size: 11px;
-            color: #4ADE80;
-            margin-top: 8px;
-            text-align: center;
-        }
         
-        /* Модальное окно для добавления товара */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal.active {
-            display: flex;
-        }
-        .modal-content {
-            background: #0F172A;
-            border-radius: 28px;
-            padding: 24px;
-            width: 90%;
-            max-width: 400px;
-        }
-        .modal-content h3 {
-            color: white;
-            margin-bottom: 20px;
-        }
-        .modal-content input, .modal-content select {
-            width: 100%;
-            background: #1E293B;
-            border: none;
-            padding: 12px 16px;
-            border-radius: 60px;
-            color: white;
-            margin-bottom: 12px;
-            outline: none;
-        }
-        .modal-content button {
-            background: #FF6B00;
-            border: none;
-            padding: 12px;
-            border-radius: 60px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 8px;
-        }
-        .modal-close {
-            background: #334155 !important;
-        }
-        
-        /* Стили для телефона */
+        /* Стили для телефона (сканер) */
         .phone-container {
             max-width: 450px;
             margin: 0 auto;
             padding: 20px;
+            min-height: 100vh;
         }
         .phone-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
         .phone-logo {
             background: #FF6B00;
@@ -216,70 +154,84 @@
             font-weight: 700;
             font-size: 18px;
         }
-        .input-box {
+        .scanner-box {
             background: #0F172A;
             border-radius: 28px;
-            padding: 20px;
-            margin-bottom: 20px;
+            overflow: hidden;
         }
-        .input-label {
-            color: #94A3B8;
-            font-size: 12px;
-            margin-bottom: 8px;
-        }
-        .code-input {
+        .video-container {
+            position: relative;
             width: 100%;
-            background: #1E293B;
-            border: none;
-            padding: 16px;
-            border-radius: 60px;
-            color: white;
-            font-size: 18px;
-            font-family: monospace;
-            text-align: center;
-            outline: none;
+            aspect-ratio: 4/3;
+            background: #000;
         }
-        .code-input:focus { border: 1px solid #FF6B00; }
-        .btn {
+        #reader {
             width: 100%;
+            height: 100%;
+        }
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #FF6B00;
+            border-radius: 24px;
+            box-shadow: inset 0 0 0 100vmax rgba(0,0,0,0.5);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        .scan-line {
+            position: absolute;
+            top: 20%;
+            left: 5%;
+            width: 90%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #FF6B00, #FFA559, transparent);
+            animation: scanMove 2s infinite;
+            pointer-events: none;
+        }
+        @keyframes scanMove {
+            0% { top: 15%; opacity: 0.4; }
+            50% { top: 80%; opacity: 1; }
+            100% { top: 15%; opacity: 0.4; }
+        }
+        .toolbar {
+            display: flex;
+            padding: 12px;
+        }
+        .btn-scan {
+            flex: 1;
             background: #FF6B00;
             border: none;
-            padding: 16px;
+            padding: 12px;
             border-radius: 60px;
-            font-weight: 700;
-            font-size: 16px;
+            font-weight: 600;
             color: white;
             cursor: pointer;
-            margin-top: 16px;
+        }
+        .status {
+            background: #111827;
+            padding: 10px;
+            border-radius: 30px;
+            font-size: 12px;
+            text-align: center;
+            color: #94A3B8;
+            margin: 12px 0;
         }
         .result-card {
             background: #0F172A;
             border-radius: 24px;
             padding: 16px;
-            margin-top: 20px;
+            margin-top: 16px;
         }
         .result-success { border-left: 4px solid #4ADE80; }
         .result-error { border-left: 4px solid #FF4444; }
-        .result-info { border-left: 4px solid #FF6B00; }
         .result-text { color: white; font-size: 14px; }
-        .keyboard {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .key {
-            background: #1E293B;
-            border: none;
-            padding: 16px;
-            border-radius: 60px;
-            color: white;
-            font-size: 20px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .key-del { background: #3A1E1E; color: #FF6B6B; }
-        .key-clear { background: #334155; }
+        
         .mode-switch {
             position: fixed;
             bottom: 20px;
@@ -293,51 +245,34 @@
             cursor: pointer;
             z-index: 1000;
         }
-        .add-btn {
-            background: #4ADE80 !important;
-            color: #0B0F1C !important;
-        }
+        .add-btn { background: #4ADE80 !important; color: #0B0F1C !important; }
     </style>
 </head>
 <body>
-    <button class="mode-switch" onclick="toggleMode()">🔄 Переключить режим</button>
+    <button class="mode-switch" onclick="toggleMode()">🔄 Переключить</button>
 
-    <!-- Режим телефона (сканер) -->
+    <!-- Режим телефона (сканер с камерой) -->
     <div class="mode-phone">
         <div class="phone-container">
             <div class="phone-header">
-                <div class="phone-logo">📷 Ozon Сканер</div>
-                <div style="color:#94A3B8; font-size:12px; margin-top:8px;">Введите штрихкод или добавьте товар</div>
+                <div class="phone-logo">📷 Ozon Сканер ПВЗ</div>
+                <div style="color:#94A3B8; font-size:12px; margin-top:8px;">Наведите камеру на штрихкод</div>
             </div>
 
-            <div id="phoneSyncStatus" class="sync-status">🟢 Готов к сканированию</div>
-
-            <div class="input-box">
-                <div class="input-label">📱 Штрихкод или номер заказа</div>
-                <input type="text" id="codeInput" class="code-input" placeholder="Введите код..." autocomplete="off">
-                <button id="submitBtn" class="btn">✅ Отсканировать</button>
-                <button id="phoneAddBtn" class="btn add-btn" style="margin-top:8px;">➕ Добавить новый товар</button>
-                
-                <div class="keyboard">
-                    <button class="key" data-key="1">1</button>
-                    <button class="key" data-key="2">2</button>
-                    <button class="key" data-key="3">3</button>
-                    <button class="key" data-key="4">4</button>
-                    <button class="key" data-key="5">5</button>
-                    <button class="key" data-key="6">6</button>
-                    <button class="key" data-key="7">7</button>
-                    <button class="key" data-key="8">8</button>
-                    <button class="key" data-key="9">9</button>
-                    <button class="key" data-key="0">0</button>
-                    <button class="key key-del" data-action="del">⌫</button>
-                    <button class="key key-clear" data-action="clear">C</button>
+            <div class="scanner-box">
+                <div class="video-container">
+                    <div id="reader"></div>
+                    <div class="scan-overlay"></div>
+                    <div class="scan-line"></div>
                 </div>
+                <div class="toolbar">
+                    <button id="startBtn" class="btn-scan">📷 Включить камеру</button>
+                </div>
+                <div id="phoneStatus" class="status">📱 Нажмите "Включить камеру"</div>
             </div>
 
             <div id="lastResult"></div>
-            
-            <div class="input-label" style="margin-top:20px; margin-bottom:8px;">📋 Последние операции</div>
-            <div id="historyList"></div>
+            <div id="historyList" style="margin-top:16px;"></div>
         </div>
     </div>
 
@@ -347,12 +282,11 @@
             <div class="header">
                 <div class="logo">
                     <div class="logo-icon">📦</div>
-                    <div class="logo-text">Ozon ПВЗ — Панель управления</div>
+                    <div class="logo-text">Ozon ПВЗ — Панель</div>
                 </div>
                 <div class="stats">
-                    <div class="stat-card"><div class="stat-value" id="acceptedToday">0</div><div class="stat-label">Принято сегодня</div></div>
-                    <div class="stat-card"><div class="stat-value" id="givenToday">0</div><div class="stat-label">Выдано сегодня</div></div>
-                    <div class="stat-card"><div class="stat-value" id="totalMoney">0</div><div class="stat-label">Выручка</div></div>
+                    <div class="stat-card"><div class="stat-value" id="acceptedToday">0</div><div class="stat-label">Принято</div></div>
+                    <div class="stat-card"><div class="stat-value" id="givenToday">0</div><div class="stat-label">Выдано</div></div>
                     <div class="stat-card"><div class="stat-value" id="pendingCount">0</div><div class="stat-label">На приёмке</div></div>
                 </div>
             </div>
@@ -361,10 +295,7 @@
                 <div class="card">
                     <div class="card-title">
                         📥 На приёмку
-                        <div>
-                            <button id="acceptAllBtn">✅ Принять всё</button>
-                            <button id="pcAddBtn" class="add-btn">➕ Добавить товар</button>
-                        </div>
+                        <button id="acceptAllBtn">✅ Принять всё</button>
                     </div>
                     <div id="pendingList" class="list"></div>
                 </div>
@@ -372,60 +303,22 @@
                 <div class="card">
                     <div class="card-title">
                         🎁 Заказы на выдачу
-                        <button id="pcAddOrderBtn" class="add-btn">➕ Добавить заказ</button>
                     </div>
                     <div id="ordersList" class="list"></div>
                 </div>
 
                 <div class="card">
                     <div class="card-title">
-                        📦 Склад
+                        📦 Склад (можно выдать)
                     </div>
                     <div id="stockList" class="list"></div>
                 </div>
-
-                <div class="card">
-                    <div class="card-title">
-                        📋 История сканирований
-                        <button id="clearHistoryBtn">Очистить</button>
-                    </div>
-                    <div id="scansList" class="list"></div>
-                </div>
             </div>
-            <div id="pcSyncStatus" class="sync-status">🟢 Данные синхронизируются</div>
-        </div>
-    </div>
-
-    <!-- Модальное окно для добавления товара -->
-    <div id="addItemModal" class="modal">
-        <div class="modal-content">
-            <h3>➕ Добавить новый товар</h3>
-            <input type="text" id="newItemName" placeholder="Название товара">
-            <input type="text" id="newItemBarcode" placeholder="Штрихкод (13 цифр)">
-            <input type="number" id="newItemPrice" placeholder="Цена">
-            <input type="number" id="newItemQuantity" placeholder="Количество" value="1">
-            <button onclick="addNewItem()">✅ Добавить на приёмку</button>
-            <button class="modal-close" onclick="closeModal()">Отмена</button>
-        </div>
-    </div>
-
-    <!-- Модальное окно для добавления заказа -->
-    <div id="addOrderModal" class="modal">
-        <div class="modal-content">
-            <h3>🎁 Добавить заказ</h3>
-            <input type="text" id="newOrderId" placeholder="Номер заказа (OZ-1004)">
-            <input type="text" id="newOrderCustomer" placeholder="ФИО покупателя">
-            <input type="text" id="newOrderPhone" placeholder="Телефон">
-            <input type="text" id="newOrderItems" placeholder="Товары">
-            <input type="number" id="newOrderTotal" placeholder="Сумма">
-            <input type="text" id="newOrderBarcode" placeholder="Штрихкод для выдачи">
-            <button onclick="addNewOrder()">✅ Добавить заказ</button>
-            <button class="modal-close" onclick="closeOrderModal()">Отмена</button>
         </div>
     </div>
 
     <script>
-        // ========== ДАННЫЕ ПО УМОЛЧАНИЮ ==========
+        // ========== ДАННЫЕ ==========
         let pvzData = {
             pendingItems: [
                 { id: 1, name: "Xiaomi Note 12", barcode: "4601234567890", price: 24990, quantity: 5 },
@@ -436,160 +329,136 @@
             ],
             stock: [
                 { id: 6, name: "Фитнес-браслет", barcode: "4601234567895", price: 3990, quantity: 12, status: "ready" },
-                { id: 7, name: "Bluetooth колонка", barcode: "4601234567896", price: 3490, quantity: 6, status: "ready" }
+                { id: 7, name: "Bluetooth колонка", barcode: "4601234567896", price: 3490, quantity: 6, status: "ready" },
+                { id: 8, name: "Мышь Logitech", barcode: "4601234567897", price: 990, quantity: 15, status: "ready" }
             ],
             orders: [
                 { id: "OZ-1001", customer: "Анна Смирнова", phone: "+7 999 123-45-67", items: "Чехол iPhone 15 (2 шт.)", total: 1780, status: "ready", barcode: "ORD1001" },
-                { id: "OZ-1002", customer: "Михаил Петров", phone: "+7 999 234-56-78", items: "Фитнес-браслет (1 шт.)", total: 3990, status: "ready", barcode: "ORD1002" },
-                { id: "OZ-1003", customer: "Елена Козлова", phone: "+7 999 345-67-89", items: "Power Bank (1 шт.)", total: 2990, status: "ready", barcode: "ORD1003" }
+                { id: "OZ-1002", customer: "Михаил Петров", phone: "+7 999 234-56-78", items: "Фитнес-браслет (1 шт.)", total: 3990, status: "ready", barcode: "ORD1002" }
             ],
             scans: [],
-            stats: { acceptedToday: 0, givenToday: 0, totalMoney: 0 },
-            nextId: 8
+            stats: { acceptedToday: 0, givenToday: 0, totalMoney: 0 }
         };
 
+        let isScanning = false;
+        let html5QrCode = null;
         let lastCode = '';
         let lastTime = 0;
-        let phoneHistory = [];
+
+        // ========== ЗВУК КАК НА ПВЗ ==========
+        function playBeep() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.frequency.value = 880;
+                gainNode.gain.value = 0.2;
+                oscillator.start();
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+                oscillator.stop(audioCtx.currentTime + 0.3);
+                audioCtx.resume();
+            } catch(e) { console.log('Audio error'); }
+        }
+        
+        function playSuccessBeep() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.frequency.value = 1100;
+                gainNode.gain.value = 0.25;
+                oscillator.start();
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2);
+                oscillator.stop(audioCtx.currentTime + 0.2);
+                audioCtx.resume();
+            } catch(e) {}
+        }
 
         // ========== ОБЩИЕ ФУНКЦИИ ==========
         function loadData() {
             const saved = localStorage.getItem('ozon_pvz_data');
-            if (saved) {
-                pvzData = JSON.parse(saved);
-            } else {
-                saveData();
-            }
+            if (saved) pvzData = JSON.parse(saved);
+            else saveData();
         }
 
         function saveData() {
             localStorage.setItem('ozon_pvz_data', JSON.stringify(pvzData));
             localStorage.setItem('ozon_update', Date.now().toString());
+            if (document.body.classList.contains('pc-mode')) renderAllPC();
         }
 
-        // ========== ДОБАВЛЕНИЕ НОВЫХ ТОВАРОВ ==========
-        function addNewItem() {
-            const name = document.getElementById('newItemName').value;
-            const barcode = document.getElementById('newItemBarcode').value;
-            const price = parseInt(document.getElementById('newItemPrice').value);
-            const quantity = parseInt(document.getElementById('newItemQuantity').value);
-            
-            if (!name || !barcode || !price) {
-                alert("Заполните все поля!");
-                return;
+        // ========== ВЫДАЧА СО СКЛАДА ==========
+        function giveFromStock(itemId) {
+            const item = pvzData.stock.find(i => i.id === itemId);
+            if (item && item.quantity > 0) {
+                item.quantity--;
+                pvzData.stats.givenToday++;
+                pvzData.stats.totalMoney += item.price;
+                pvzData.scans.unshift({ code: item.barcode, time: new Date().toLocaleTimeString(), result: `🎁 Выдан: ${item.name}` });
+                if (pvzData.scans.length > 30) pvzData.scans.pop();
+                saveData();
+                renderAllPC();
+                playSuccessBeep();
+                showToast(`🎁 ${item.name} выдан`);
+                
+                if (item.quantity === 0) {
+                    pvzData.stock = pvzData.stock.filter(i => i.id !== itemId);
+                    saveData();
+                    renderAllPC();
+                }
             }
-            
-            const newId = pvzData.nextId || (pvzData.pendingItems.length + pvzData.stock.length + 10);
-            pvzData.pendingItems.push({
-                id: newId,
-                name: name,
-                barcode: barcode,
-                price: price,
-                quantity: quantity
-            });
-            pvzData.nextId = newId + 1;
-            
-            saveData();
-            closeModal();
-            renderAllPC();
-            showToastPC(`✅ Товар "${name}" добавлен на приёмку`);
-            
-            // Очищаем поля
-            document.getElementById('newItemName').value = '';
-            document.getElementById('newItemBarcode').value = '';
-            document.getElementById('newItemPrice').value = '';
-            document.getElementById('newItemQuantity').value = '1';
-        }
-        
-        function addNewOrder() {
-            const id = document.getElementById('newOrderId').value;
-            const customer = document.getElementById('newOrderCustomer').value;
-            const phone = document.getElementById('newOrderPhone').value;
-            const items = document.getElementById('newOrderItems').value;
-            const total = parseInt(document.getElementById('newOrderTotal').value);
-            const barcode = document.getElementById('newOrderBarcode').value;
-            
-            if (!id || !customer || !items || !total) {
-                alert("Заполните все поля!");
-                return;
-            }
-            
-            pvzData.orders.push({
-                id: id,
-                customer: customer,
-                phone: phone || "+7 XXX XXX-XX-XX",
-                items: items,
-                total: total,
-                status: "ready",
-                barcode: barcode || id
-            });
-            
-            saveData();
-            closeOrderModal();
-            renderAllPC();
-            showToastPC(`🎁 Заказ ${id} добавлен`);
-            
-            document.getElementById('newOrderId').value = '';
-            document.getElementById('newOrderCustomer').value = '';
-            document.getElementById('newOrderPhone').value = '';
-            document.getElementById('newOrderItems').value = '';
-            document.getElementById('newOrderTotal').value = '';
-            document.getElementById('newOrderBarcode').value = '';
-        }
-        
-        function closeModal() {
-            document.getElementById('addItemModal').classList.remove('active');
-        }
-        
-        function closeOrderModal() {
-            document.getElementById('addOrderModal').classList.remove('active');
         }
 
-        // ========== РЕЖИМ ТЕЛЕФОНА ==========
+        // ========== РЕЖИМ ТЕЛЕФОНА (СКАНЕР С КАМЕРОЙ) ==========
+        let phoneHistory = [];
+        
         function initPhoneMode() {
             loadData();
             
             const savedHistory = localStorage.getItem('phone_scan_history');
             if (savedHistory) phoneHistory = JSON.parse(savedHistory);
             renderPhoneHistory();
-
-            const codeInput = document.getElementById('codeInput');
-            const submitBtn = document.getElementById('submitBtn');
+            
+            const startBtn = document.getElementById('startBtn');
+            const phoneStatus = document.getElementById('phoneStatus');
             const lastResultDiv = document.getElementById('lastResult');
-            const phoneSyncStatus = document.getElementById('phoneSyncStatus');
-
+            
             function renderPhoneHistory() {
                 const historyDiv = document.getElementById('historyList');
                 if (phoneHistory.length === 0) {
-                    historyDiv.innerHTML = '<div style="color:#4B5563; text-align:center; padding:20px;">Нет операций</div>';
+                    historyDiv.innerHTML = '<div class="status">📋 Нет сканирований</div>';
                     return;
                 }
                 let html = '';
-                phoneHistory.slice(0, 10).forEach(item => {
-                    let color = item.result.includes('✅') || item.result.includes('🎁') ? '#4ADE80' : (item.result.includes('❌') ? '#FF6B6B' : '#FF6B00');
-                    html += `<div class="history-item" style="background:#0F172A; border-radius:16px; padding:12px; margin-bottom:8px;">
-                                <div style="color:${color}">${item.result}</div>
+                phoneHistory.slice(0, 5).forEach(item => {
+                    let color = item.result.includes('✅') || item.result.includes('🎁') ? '#4ADE80' : '#FF6B00';
+                    html += `<div class="result-card result-success" style="padding:12px; margin-bottom:8px;">
+                                <div class="result-text" style="color:${color}">${item.result}</div>
                                 <div style="font-size:10px; color:#6B7280;">${item.time}</div>
                             </div>`;
                 });
                 historyDiv.innerHTML = html;
             }
-
-            function addToPhoneHistory(code, result) {
+            
+            function addToHistory(code, result) {
                 phoneHistory.unshift({ code, result, time: new Date().toLocaleTimeString() });
-                if (phoneHistory.length > 20) phoneHistory.pop();
+                if (phoneHistory.length > 10) phoneHistory.pop();
                 localStorage.setItem('phone_scan_history', JSON.stringify(phoneHistory));
                 renderPhoneHistory();
             }
-
-            function sendScan(code) {
+            
+            function processScan(code) {
                 const now = Date.now();
                 if (lastCode === code && now - lastTime < 1500) return;
                 lastCode = code;
                 lastTime = now;
-
+                
                 let result = { success: false, message: '', type: '' };
-
+                
                 // Ищем в товарах на приёмку
                 const pendingIndex = pvzData.pendingItems.findIndex(i => i.barcode === code);
                 if (pendingIndex !== -1) {
@@ -599,7 +468,7 @@
                     pvzData.stats.acceptedToday += item.quantity;
                     result = { success: true, message: `✅ Принят: ${item.name} (${item.quantity} шт.)`, type: 'accept' };
                 }
-
+                
                 // Ищем в заказах
                 const orderIndex = pvzData.orders.findIndex(o => o.barcode === code || o.id === code);
                 if (orderIndex !== -1) {
@@ -609,108 +478,107 @@
                         pvzData.stats.givenToday++;
                         pvzData.stats.totalMoney += order.total;
                         result = { success: true, message: `🎁 Выдан заказ ${order.id} (${order.customer})`, type: 'give' };
-                    } else if (order.status === 'given') {
+                    } else {
                         result = { success: false, message: `❌ Заказ ${order.id} уже выдан`, type: 'error' };
                     }
                 }
-
-                // Ищем на складе
+                
+                // Ищем на складе (можно выдать со склада)
                 if (!result.message) {
                     const stockItem = pvzData.stock.find(i => i.barcode === code);
-                    if (stockItem) {
-                        result = { success: true, message: `📦 ${stockItem.name} - на складе (${stockItem.quantity} шт.)`, type: 'info' };
+                    if (stockItem && stockItem.quantity > 0) {
+                        stockItem.quantity--;
+                        pvzData.stats.givenToday++;
+                        pvzData.stats.totalMoney += stockItem.price;
+                        result = { success: true, message: `🎁 Выдан со склада: ${stockItem.name}`, type: 'give' };
+                        if (stockItem.quantity === 0) {
+                            pvzData.stock = pvzData.stock.filter(i => i.id !== stockItem.id);
+                        }
                     } else {
-                        result = { success: false, message: `⚠️ Товар с кодом ${code} не найден. Добавьте его через "Добавить товар"`, type: 'error' };
+                        result = { success: false, message: `⚠️ Товар с кодом ${code} не найден`, type: 'error' };
                     }
                 }
-
+                
                 saveData();
                 
-                const resultClass = result.type === 'error' ? 'result-error' : (result.type === 'accept' || result.type === 'give' ? 'result-success' : 'result-info');
-                const icon = result.type === 'accept' ? '✅' : result.type === 'give' ? '🎁' : result.type === 'error' ? '⚠️' : 'ℹ️';
-                
+                const icon = result.success ? (result.type === 'accept' ? '✅' : '🎁') : '⚠️';
                 lastResultDiv.innerHTML = `
-                    <div class="result-card ${resultClass}">
+                    <div class="result-card result-success">
                         <div class="result-text">${icon} ${result.message}</div>
-                        <div class="result-time">${new Date().toLocaleTimeString()}</div>
+                        <div style="font-size:10px; color:#6B7280;">${new Date().toLocaleTimeString()}</div>
                     </div>
                 `;
                 
-                addToPhoneHistory(code, result.message);
+                addToHistory(code, result.message);
                 
-                if (result.success && navigator.vibrate) navigator.vibrate(100);
-                
-                codeInput.value = '';
-                codeInput.focus();
-                
-                phoneSyncStatus.innerHTML = '✅ Отправлено';
-                setTimeout(() => { phoneSyncStatus.innerHTML = '🟢 Готов к сканированию'; }, 2000);
-            }
-
-            submitBtn.onclick = () => {
-                const code = codeInput.value.trim();
-                if (code) sendScan(code);
-            };
-
-            codeInput.onkeypress = (e) => {
-                if (e.key === 'Enter') {
-                    const code = codeInput.value.trim();
-                    if (code) sendScan(code);
+                if (result.success) {
+                    playSuccessBeep();
+                    if (navigator.vibrate) navigator.vibrate(100);
+                } else {
+                    playBeep();
                 }
-            };
+                
+                phoneStatus.innerHTML = '✅ Сканирование выполнено';
+                setTimeout(() => { phoneStatus.innerHTML = '📷 Камера работает. Наведите на штрихкод'; }, 2000);
+            }
             
-            document.getElementById('phoneAddBtn').onclick = () => {
-                document.getElementById('addItemModal').classList.add('active');
-            };
-
-            document.querySelectorAll('.key').forEach(btn => {
-                btn.onclick = () => {
-                    if (btn.dataset.key) {
-                        codeInput.value += btn.dataset.key;
-                    } else if (btn.dataset.action === 'del') {
-                        codeInput.value = codeInput.value.slice(0, -1);
-                    } else if (btn.dataset.action === 'clear') {
-                        codeInput.value = '';
-                    }
-                    codeInput.focus();
-                };
-            });
+            async function startScanner() {
+                if (isScanning) return;
+                phoneStatus.innerHTML = '🔄 Запрос доступа к камере...';
+                try {
+                    if (html5QrCode) { try { await html5QrCode.stop(); } catch(e) {} }
+                    html5QrCode = new Html5Qrcode("reader");
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        { fps: 15, qrbox: { width: 280, height: 200 }, aspectRatio: 4/3 },
+                        (decodedText) => { if (decodedText) processScan(decodedText); },
+                        () => {}
+                    );
+                    isScanning = true;
+                    startBtn.innerHTML = '⏹️ Остановить';
+                    phoneStatus.innerHTML = '✅ Камера работает. Наведите на штрихкод';
+                    phoneStatus.style.color = '#4ADE80';
+                } catch(err) {
+                    phoneStatus.innerHTML = '❌ Ошибка доступа к камере';
+                    console.error(err);
+                }
+            }
+            
+            async function stopScanner() {
+                if (html5QrCode && isScanning) {
+                    try { await html5QrCode.stop(); } catch(e) {}
+                }
+                isScanning = false;
+                startBtn.innerHTML = '📷 Включить камеру';
+                phoneStatus.innerHTML = '📱 Сканер остановлен';
+                phoneStatus.style.color = '#94A3B8';
+            }
+            
+            startBtn.onclick = () => isScanning ? stopScanner() : startScanner();
         }
 
         // ========== РЕЖИМ ПК ==========
         function initPCMode() {
             loadData();
             renderAllPC();
-
             window.addEventListener('storage', (e) => {
                 if (e.key === 'ozon_pvz_data' || e.key === 'ozon_update') {
                     loadData();
                     renderAllPC();
-                    document.getElementById('pcSyncStatus').innerHTML = '✅ Данные обновлены';
-                    setTimeout(() => { document.getElementById('pcSyncStatus').innerHTML = '🟢 Данные синхронизируются'; }, 2000);
                 }
             });
-            
-            document.getElementById('pcAddBtn').onclick = () => {
-                document.getElementById('addItemModal').classList.add('active');
-            };
-            
-            document.getElementById('pcAddOrderBtn').onclick = () => {
-                document.getElementById('addOrderModal').classList.add('active');
-            };
         }
-
+        
         function renderAllPC() {
             renderPending();
             renderOrders();
             renderStock();
-            renderScans();
             updateStatsPC();
         }
-
+        
         function renderPending() {
             const container = document.getElementById('pendingList');
-            if (!pvzData.pendingItems || pvzData.pendingItems.length === 0) {
+            if (!pvzData.pendingItems.length) {
                 container.innerHTML = '<div class="empty">✅ Нет товаров на приёмку</div>';
                 return;
             }
@@ -720,22 +588,20 @@
                             <div class="item-info">
                                 <div class="item-name">📦 ${item.name}</div>
                                 <div class="item-code">${item.barcode}</div>
-                                <div class="item-quantity">📦 ${item.quantity} шт.</div>
+                                <div class="item-quantity">${item.quantity} шт.</div>
                             </div>
                             <div class="item-price">${item.price.toLocaleString()} ₽</div>
-                            <div class="item-actions">
-                                <button class="btn-sm" onclick="window.acceptItemPC(${item.id})">✅ Принять</button>
-                            </div>
+                            <button class="btn-sm" onclick="acceptItemPC(${item.id})">✅ Принять</button>
                         </div>`;
             });
             container.innerHTML = html;
         }
-
+        
         function renderOrders() {
             const container = document.getElementById('ordersList');
-            const readyOrders = (pvzData.orders || []).filter(o => o.status === 'ready');
-            if (readyOrders.length === 0) {
-                container.innerHTML = '<div class="empty">🎁 Нет заказов на выдачу</div>';
+            const readyOrders = pvzData.orders.filter(o => o.status === 'ready');
+            if (!readyOrders.length) {
+                container.innerHTML = '<div class="empty">🎁 Нет заказов</div>';
                 return;
             }
             let html = '';
@@ -743,21 +609,18 @@
                 html += `<div class="item">
                             <div class="item-info">
                                 <div class="item-name">Заказ ${order.id}</div>
-                                <div class="item-code">${order.customer} • ${order.phone}</div>
-                                <div class="item-code">${order.items}</div>
+                                <div class="item-code">${order.customer}</div>
                             </div>
                             <div class="item-price">${order.total.toLocaleString()} ₽</div>
-                            <div class="item-actions">
-                                <button class="btn-sm btn-green" onclick="window.giveOrderPC('${order.id}')">🎁 Выдать</button>
-                            </div>
+                            <button class="btn-sm btn-green" onclick="giveOrderPC('${order.id}')">🎁 Выдать</button>
                         </div>`;
             });
             container.innerHTML = html;
         }
-
+        
         function renderStock() {
             const container = document.getElementById('stockList');
-            if (!pvzData.stock || pvzData.stock.length === 0) {
+            if (!pvzData.stock.length) {
                 container.innerHTML = '<div class="empty">📦 Склад пуст</div>';
                 return;
             }
@@ -767,70 +630,50 @@
                             <div class="item-info">
                                 <div class="item-name">📦 ${item.name}</div>
                                 <div class="item-code">${item.barcode}</div>
-                                <div class="item-quantity">📦 ${item.quantity} шт.</div>
+                                <div class="item-quantity">${item.quantity} шт.</div>
                             </div>
                             <div class="item-price">${item.price.toLocaleString()} ₽</div>
-                            <div class="item-status" style="color:#4ADE80;">✅ Готов</div>
+                            <button class="btn-sm btn-green" onclick="giveFromStock(${item.id})">🎁 Выдать</button>
                         </div>`;
             });
             container.innerHTML = html;
         }
-
-        function renderScans() {
-            const container = document.getElementById('scansList');
-            if (!pvzData.scans || pvzData.scans.length === 0) {
-                container.innerHTML = '<div class="empty">📷 Нет сканирований</div>';
-                return;
-            }
-            let html = '';
-            pvzData.scans.slice(0, 20).forEach(scan => {
-                let color = scan.result.includes('✅') || scan.result.includes('🎁') ? '#4ADE80' : (scan.result.includes('❌') ? '#FF6B6B' : '#FF6B00');
-                html += `<div class="scan-item">
-                            <div style="color:${color}">📷 ${scan.code}</div>
-                            <div style="color:${color}">${scan.result}</div>
-                            <div class="scan-time">${scan.time}</div>
-                        </div>`;
-            });
-            container.innerHTML = html;
-        }
-
+        
         function updateStatsPC() {
             document.getElementById('acceptedToday').innerText = pvzData.stats.acceptedToday || 0;
             document.getElementById('givenToday').innerText = pvzData.stats.givenToday || 0;
-            document.getElementById('totalMoney').innerText = (pvzData.stats.totalMoney || 0).toLocaleString() + ' ₽';
-            document.getElementById('pendingCount').innerText = (pvzData.pendingItems || []).length;
+            document.getElementById('pendingCount').innerText = pvzData.pendingItems.length;
         }
-
+        
         window.acceptItemPC = function(id) {
             const item = pvzData.pendingItems.find(i => i.id === id);
             if (item) {
                 pvzData.pendingItems = pvzData.pendingItems.filter(i => i.id !== id);
                 pvzData.stock.push({ ...item, status: 'ready' });
                 pvzData.stats.acceptedToday += item.quantity;
-                pvzData.scans.unshift({ code: item.barcode, time: new Date().toLocaleTimeString(), result: `✅ Принят: ${item.name}` });
-                if (pvzData.scans.length > 30) pvzData.scans.pop();
                 saveData();
                 renderAllPC();
-                showToastPC(`✅ ${item.name} принят`);
+                playSuccessBeep();
+                showToast(`✅ ${item.name} принят`);
             }
         };
-
+        
         window.giveOrderPC = function(orderId) {
             const order = pvzData.orders.find(o => o.id === orderId);
             if (order && order.status === 'ready') {
                 order.status = 'given';
                 pvzData.stats.givenToday++;
                 pvzData.stats.totalMoney += order.total;
-                pvzData.scans.unshift({ code: order.barcode, time: new Date().toLocaleTimeString(), result: `🎁 Выдан заказ ${order.id}` });
-                if (pvzData.scans.length > 30) pvzData.scans.pop();
                 saveData();
                 renderAllPC();
-                showToastPC(`🎁 Заказ ${orderId} выдан`);
+                playSuccessBeep();
+                showToast(`🎁 Заказ ${orderId} выдан`);
             }
         };
-
+        
+        window.giveFromStock = giveFromStock;
+        
         function acceptAllPC() {
-            if (!pvzData.pendingItems.length) return;
             pvzData.pendingItems.forEach(item => {
                 pvzData.stock.push({ ...item, status: 'ready' });
                 pvzData.stats.acceptedToday += item.quantity;
@@ -838,17 +681,11 @@
             pvzData.pendingItems = [];
             saveData();
             renderAllPC();
-            showToastPC(`✅ Принято всё`);
+            playSuccessBeep();
+            showToast(`✅ Принято всё`);
         }
-
-        function clearHistoryPC() {
-            pvzData.scans = [];
-            saveData();
-            renderScans();
-            showToastPC('🗑️ История очищена');
-        }
-
-        function showToastPC(msg) {
+        
+        function showToast(msg) {
             const toast = document.createElement('div');
             toast.innerText = msg;
             toast.style.position = 'fixed';
@@ -864,9 +701,8 @@
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 2000);
         }
-
+        
         document.getElementById('acceptAllBtn').onclick = acceptAllPC;
-        document.getElementById('clearHistoryBtn').onclick = clearHistoryPC;
 
         // ========== ПЕРЕКЛЮЧЕНИЕ РЕЖИМА ==========
         function toggleMode() {
@@ -882,25 +718,21 @@
                 localStorage.setItem('ozon_mode', 'phone');
             }
         }
-
+        
         window.toggleMode = toggleMode;
-        window.addNewItem = addNewItem;
-        window.closeModal = closeModal;
-        window.closeOrderModal = closeOrderModal;
-        window.addNewOrder = addNewOrder;
-
+        
+        // Запуск
         const savedMode = localStorage.getItem('ozon_mode');
-        if (savedMode === 'pc' && !(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent))) {
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (savedMode === 'pc' && !isMobile) {
             document.body.classList.add('pc-mode');
             initPCMode();
+        } else if (savedMode === 'phone' || isMobile) {
+            document.body.classList.add('phone-mode');
+            initPhoneMode();
         } else {
-            if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                document.body.classList.add('phone-mode');
-                initPhoneMode();
-            } else {
-                document.body.classList.add('pc-mode');
-                initPCMode();
-            }
+            document.body.classList.add('pc-mode');
+            initPCMode();
         }
     </script>
 </body>
