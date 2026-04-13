@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ozon ПВЗ — Сканер</title>
+    <title>Ozon ПВЗ — Приём и Выдача</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
@@ -14,12 +14,142 @@
             min-height: 100vh;
         }
         
-        /* Режимы */
         .mode-phone, .mode-pc { display: none; }
         body.phone-mode .mode-phone { display: block; }
         body.pc-mode .mode-pc { display: block; }
         
-        /* Общие стили */
+        /* Стили для телефона */
+        .phone-container {
+            max-width: 450px;
+            margin: 0 auto;
+            padding: 16px;
+            min-height: 100vh;
+        }
+        .phone-header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .phone-logo {
+            background: #FF6B00;
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 60px;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        /* Переключатель режимов */
+        .mode-toggle {
+            display: flex;
+            gap: 12px;
+            margin: 16px 0;
+            background: #0F172A;
+            padding: 6px;
+            border-radius: 60px;
+        }
+        .mode-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 12px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #94A3B8;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .mode-btn.active {
+            background: #FF6B00;
+            color: white;
+        }
+        .mode-give.active { background: #4ADE80; color: #0B0F1C; }
+        
+        /* Сканер — УВЕЛИЧЕННАЯ ОБЛАСТЬ */
+        .scanner-box {
+            background: #0F172A;
+            border-radius: 28px;
+            overflow: hidden;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+        }
+        #reader {
+            width: 100%;
+            height: 100%;
+        }
+        /* Увеличиваем рамку сканирования на весь экран */
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            border: 2px solid #FF6B00;
+            border-radius: 24px;
+            box-shadow: inset 0 0 0 100vmax rgba(0,0,0,0.4);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+        }
+        .scan-line {
+            position: absolute;
+            top: 20%;
+            left: 5%;
+            width: 90%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #FF6B00, #FFA559, transparent);
+            animation: scanMove 2s infinite;
+            z-index: 11;
+            pointer-events: none;
+        }
+        @keyframes scanMove {
+            0% { top: 15%; opacity: 0.4; }
+            50% { top: 80%; opacity: 1; }
+            100% { top: 15%; opacity: 0.4; }
+        }
+        .toolbar {
+            display: flex;
+            padding: 12px;
+            gap: 12px;
+        }
+        .btn-scan {
+            flex: 1;
+            background: #FF6B00;
+            border: none;
+            padding: 14px;
+            border-radius: 60px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+        }
+        .status {
+            background: #111827;
+            padding: 10px;
+            border-radius: 30px;
+            font-size: 12px;
+            text-align: center;
+            color: #94A3B8;
+            margin: 12px;
+        }
+        .result-card {
+            background: #0F172A;
+            border-radius: 24px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .result-success { border-left: 4px solid #4ADE80; }
+        .result-error { border-left: 4px solid #FF4444; }
+        .result-text { color: white; font-size: 14px; }
+        
+        /* Стили для ПК */
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .header {
             background: #0F172A;
@@ -91,17 +221,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .card-title button {
-            background: #FF6B00;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 40px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
         }
         .list {
             max-height: 400px;
@@ -134,104 +253,6 @@
         .btn-green { background: #4ADE80; color: #0B0F1C; }
         .empty { text-align: center; padding: 40px; color: #4B5563; }
         
-        /* Стили для телефона (сканер) */
-        .phone-container {
-            max-width: 450px;
-            margin: 0 auto;
-            padding: 20px;
-            min-height: 100vh;
-        }
-        .phone-header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .phone-logo {
-            background: #FF6B00;
-            display: inline-block;
-            padding: 12px 24px;
-            border-radius: 60px;
-            color: white;
-            font-weight: 700;
-            font-size: 18px;
-        }
-        .scanner-box {
-            background: #0F172A;
-            border-radius: 28px;
-            overflow: hidden;
-        }
-        .video-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 4/3;
-            background: #000;
-        }
-        #reader {
-            width: 100%;
-            height: 100%;
-        }
-        .scan-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 2px solid #FF6B00;
-            border-radius: 24px;
-            box-shadow: inset 0 0 0 100vmax rgba(0,0,0,0.5);
-            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-        }
-        .scan-line {
-            position: absolute;
-            top: 20%;
-            left: 5%;
-            width: 90%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #FF6B00, #FFA559, transparent);
-            animation: scanMove 2s infinite;
-            pointer-events: none;
-        }
-        @keyframes scanMove {
-            0% { top: 15%; opacity: 0.4; }
-            50% { top: 80%; opacity: 1; }
-            100% { top: 15%; opacity: 0.4; }
-        }
-        .toolbar {
-            display: flex;
-            padding: 12px;
-        }
-        .btn-scan {
-            flex: 1;
-            background: #FF6B00;
-            border: none;
-            padding: 12px;
-            border-radius: 60px;
-            font-weight: 600;
-            color: white;
-            cursor: pointer;
-        }
-        .status {
-            background: #111827;
-            padding: 10px;
-            border-radius: 30px;
-            font-size: 12px;
-            text-align: center;
-            color: #94A3B8;
-            margin: 12px 0;
-        }
-        .result-card {
-            background: #0F172A;
-            border-radius: 24px;
-            padding: 16px;
-            margin-top: 16px;
-        }
-        .result-success { border-left: 4px solid #4ADE80; }
-        .result-error { border-left: 4px solid #FF4444; }
-        .result-text { color: white; font-size: 14px; }
-        
         .mode-switch {
             position: fixed;
             bottom: 20px;
@@ -245,18 +266,41 @@
             cursor: pointer;
             z-index: 1000;
         }
-        .add-btn { background: #4ADE80 !important; color: #0B0F1C !important; }
+        
+        /* Подсказка для лучшего сканирования */
+        .tip {
+            background: #1E293B;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            color: #94A3B8;
+            text-align: center;
+            margin: 8px;
+        }
+        .tip i {
+            color: #FF6B00;
+        }
     </style>
 </head>
 <body>
-    <button class="mode-switch" onclick="toggleMode()">🔄 Переключить</button>
+    <button class="mode-switch" onclick="toggleDeviceMode()">🔄 Телефон/ПК</button>
 
-    <!-- Режим телефона (сканер с камерой) -->
+    <!-- РЕЖИМ ТЕЛЕФОНА (СКАНЕР) -->
     <div class="mode-phone">
         <div class="phone-container">
             <div class="phone-header">
-                <div class="phone-logo">📷 Ozon Сканер ПВЗ</div>
-                <div style="color:#94A3B8; font-size:12px; margin-top:8px;">Наведите камеру на штрихкод</div>
+                <div class="phone-logo">📦 Ozon ПВЗ Сканер</div>
+            </div>
+
+            <!-- Переключатель Приём/Выдача -->
+            <div class="mode-toggle">
+                <button id="receiveModeBtn" class="mode-btn mode-receive active">📥 ПРИЁМ</button>
+                <button id="giveModeBtn" class="mode-btn mode-give">🎁 ВЫДАЧА</button>
+            </div>
+
+            <!-- Подсказка -->
+            <div class="tip">
+                <i>💡 Совет:</i> Держите телефон на расстоянии 10-20 см от штрихкода при хорошем освещении
             </div>
 
             <div class="scanner-box">
@@ -276,7 +320,7 @@
         </div>
     </div>
 
-    <!-- Режим ПК (панель ПВЗ) -->
+    <!-- РЕЖИМ ПК (ПАНЕЛЬ УПРАВЛЕНИЯ) -->
     <div class="mode-pc">
         <div class="container">
             <div class="header">
@@ -285,9 +329,10 @@
                     <div class="logo-text">Ozon ПВЗ — Панель</div>
                 </div>
                 <div class="stats">
-                    <div class="stat-card"><div class="stat-value" id="acceptedToday">0</div><div class="stat-label">Принято</div></div>
-                    <div class="stat-card"><div class="stat-value" id="givenToday">0</div><div class="stat-label">Выдано</div></div>
+                    <div class="stat-card"><div class="stat-value" id="acceptedCount">0</div><div class="stat-label">Принято сегодня</div></div>
+                    <div class="stat-card"><div class="stat-value" id="givenCount">0</div><div class="stat-label">Выдано сегодня</div></div>
                     <div class="stat-card"><div class="stat-value" id="pendingCount">0</div><div class="stat-label">На приёмке</div></div>
+                    <div class="stat-card"><div class="stat-value" id="stockCount">0</div><div class="stat-label">На складе</div></div>
                 </div>
             </div>
 
@@ -325,60 +370,63 @@
                 { id: 2, name: "Huawei FreeBuds", barcode: "4601234567891", price: 4990, quantity: 10 },
                 { id: 3, name: "Зарядка 65W", barcode: "4601234567892", price: 1290, quantity: 15 },
                 { id: 4, name: "Чехол iPhone 15", barcode: "4601234567893", price: 890, quantity: 20 },
-                { id: 5, name: "Power Bank", barcode: "4601234567894", price: 2990, quantity: 8 }
+                { id: 5, name: "Power Bank", barcode: "4601234567894", price: 2990, quantity: 8 },
+                { id: 6, name: "Ноутбук Honor", barcode: "4601234567895", price: 59990, quantity: 3 }
             ],
             stock: [
-                { id: 6, name: "Фитнес-браслет", barcode: "4601234567895", price: 3990, quantity: 12, status: "ready" },
-                { id: 7, name: "Bluetooth колонка", barcode: "4601234567896", price: 3490, quantity: 6, status: "ready" },
-                { id: 8, name: "Мышь Logitech", barcode: "4601234567897", price: 990, quantity: 15, status: "ready" }
+                { id: 7, name: "Фитнес-браслет", barcode: "4601234567896", price: 3990, quantity: 12 },
+                { id: 8, name: "Bluetooth колонка", barcode: "4601234567897", price: 3490, quantity: 6 },
+                { id: 9, name: "Мышь Logitech", barcode: "4601234567898", price: 990, quantity: 15 }
             ],
             orders: [
                 { id: "OZ-1001", customer: "Анна Смирнова", phone: "+7 999 123-45-67", items: "Чехол iPhone 15 (2 шт.)", total: 1780, status: "ready", barcode: "ORD1001" },
-                { id: "OZ-1002", customer: "Михаил Петров", phone: "+7 999 234-56-78", items: "Фитнес-браслет (1 шт.)", total: 3990, status: "ready", barcode: "ORD1002" }
+                { id: "OZ-1002", customer: "Михаил Петров", phone: "+7 999 234-56-78", items: "Фитнес-браслет (1 шт.)", total: 3990, status: "ready", barcode: "ORD1002" },
+                { id: "OZ-1003", customer: "Елена Козлова", phone: "+7 999 345-67-89", items: "Мышь Logitech (1 шт.)", total: 990, status: "ready", barcode: "ORD1003" }
             ],
             scans: [],
             stats: { acceptedToday: 0, givenToday: 0, totalMoney: 0 }
         };
 
+        let scannerMode = "receive";
         let isScanning = false;
         let html5QrCode = null;
         let lastCode = '';
         let lastTime = 0;
+        let phoneHistory = [];
 
-        // ========== ЗВУК КАК НА ПВЗ ==========
-        function playBeep() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                oscillator.frequency.value = 880;
-                gainNode.gain.value = 0.2;
-                oscillator.start();
-                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
-                oscillator.stop(audioCtx.currentTime + 0.3);
-                audioCtx.resume();
-            } catch(e) { console.log('Audio error'); }
-        }
-        
+        // ========== ЗВУКИ ==========
         function playSuccessBeep() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                oscillator.frequency.value = 1100;
-                gainNode.gain.value = 0.25;
-                oscillator.start();
-                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2);
-                oscillator.stop(audioCtx.currentTime + 0.2);
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 1100;
+                gain.gain.value = 0.25;
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2);
+                osc.stop(audioCtx.currentTime + 0.2);
+                audioCtx.resume();
+            } catch(e) {}
+        }
+        
+        function playErrorBeep() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 440;
+                gain.gain.value = 0.2;
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+                osc.stop(audioCtx.currentTime + 0.3);
                 audioCtx.resume();
             } catch(e) {}
         }
 
-        // ========== ОБЩИЕ ФУНКЦИИ ==========
         function loadData() {
             const saved = localStorage.getItem('ozon_pvz_data');
             if (saved) pvzData = JSON.parse(saved);
@@ -391,7 +439,6 @@
             if (document.body.classList.contains('pc-mode')) renderAllPC();
         }
 
-        // ========== ВЫДАЧА СО СКЛАДА ==========
         function giveFromStock(itemId) {
             const item = pvzData.stock.find(i => i.id === itemId);
             if (item && item.quantity > 0) {
@@ -401,27 +448,44 @@
                 pvzData.scans.unshift({ code: item.barcode, time: new Date().toLocaleTimeString(), result: `🎁 Выдан: ${item.name}` });
                 if (pvzData.scans.length > 30) pvzData.scans.pop();
                 saveData();
-                renderAllPC();
+                if (document.body.classList.contains('pc-mode')) renderAllPC();
                 playSuccessBeep();
-                showToast(`🎁 ${item.name} выдан`);
+                showToastPC(`🎁 ${item.name} выдан`);
                 
                 if (item.quantity === 0) {
                     pvzData.stock = pvzData.stock.filter(i => i.id !== itemId);
                     saveData();
-                    renderAllPC();
+                    if (document.body.classList.contains('pc-mode')) renderAllPC();
                 }
             }
         }
 
-        // ========== РЕЖИМ ТЕЛЕФОНА (СКАНЕР С КАМЕРОЙ) ==========
-        let phoneHistory = [];
-        
+        // ========== ТЕЛЕФОН ==========
         function initPhoneMode() {
             loadData();
             
             const savedHistory = localStorage.getItem('phone_scan_history');
             if (savedHistory) phoneHistory = JSON.parse(savedHistory);
             renderPhoneHistory();
+            
+            const receiveBtn = document.getElementById('receiveModeBtn');
+            const giveBtn = document.getElementById('giveModeBtn');
+            
+            receiveBtn.onclick = () => {
+                scannerMode = "receive";
+                receiveBtn.classList.add('active');
+                giveBtn.classList.remove('active');
+                document.getElementById('phoneStatus').innerHTML = '📥 Режим ПРИЁМА. Сканируйте товары';
+                playSuccessBeep();
+            };
+            
+            giveBtn.onclick = () => {
+                scannerMode = "give";
+                giveBtn.classList.add('active');
+                receiveBtn.classList.remove('active');
+                document.getElementById('phoneStatus').innerHTML = '🎁 Режим ВЫДАЧИ. Сканируйте заказы';
+                playSuccessBeep();
+            };
             
             const startBtn = document.getElementById('startBtn');
             const phoneStatus = document.getElementById('phoneStatus');
@@ -459,51 +523,52 @@
                 
                 let result = { success: false, message: '', type: '' };
                 
-                // Ищем в товарах на приёмку
-                const pendingIndex = pvzData.pendingItems.findIndex(i => i.barcode === code);
-                if (pendingIndex !== -1) {
-                    const item = pvzData.pendingItems[pendingIndex];
-                    pvzData.pendingItems.splice(pendingIndex, 1);
-                    pvzData.stock.push({ ...item, status: 'ready' });
-                    pvzData.stats.acceptedToday += item.quantity;
-                    result = { success: true, message: `✅ Принят: ${item.name} (${item.quantity} шт.)`, type: 'accept' };
-                }
-                
-                // Ищем в заказах
-                const orderIndex = pvzData.orders.findIndex(o => o.barcode === code || o.id === code);
-                if (orderIndex !== -1) {
-                    const order = pvzData.orders[orderIndex];
-                    if (order.status === 'ready') {
-                        order.status = 'given';
-                        pvzData.stats.givenToday++;
-                        pvzData.stats.totalMoney += order.total;
-                        result = { success: true, message: `🎁 Выдан заказ ${order.id} (${order.customer})`, type: 'give' };
-                    } else {
-                        result = { success: false, message: `❌ Заказ ${order.id} уже выдан`, type: 'error' };
-                    }
-                }
-                
-                // Ищем на складе (можно выдать со склада)
-                if (!result.message) {
-                    const stockItem = pvzData.stock.find(i => i.barcode === code);
-                    if (stockItem && stockItem.quantity > 0) {
-                        stockItem.quantity--;
-                        pvzData.stats.givenToday++;
-                        pvzData.stats.totalMoney += stockItem.price;
-                        result = { success: true, message: `🎁 Выдан со склада: ${stockItem.name}`, type: 'give' };
-                        if (stockItem.quantity === 0) {
-                            pvzData.stock = pvzData.stock.filter(i => i.id !== stockItem.id);
-                        }
+                if (scannerMode === "receive") {
+                    const pendingIndex = pvzData.pendingItems.findIndex(i => i.barcode === code);
+                    if (pendingIndex !== -1) {
+                        const item = pvzData.pendingItems[pendingIndex];
+                        pvzData.pendingItems.splice(pendingIndex, 1);
+                        pvzData.stock.push({ ...item });
+                        pvzData.stats.acceptedToday += item.quantity;
+                        result = { success: true, message: `✅ Принят: ${item.name} (${item.quantity} шт.)`, type: 'accept' };
                     } else {
                         result = { success: false, message: `⚠️ Товар с кодом ${code} не найден`, type: 'error' };
+                    }
+                } else {
+                    const orderIndex = pvzData.orders.findIndex(o => o.barcode === code || o.id === code);
+                    if (orderIndex !== -1) {
+                        const order = pvzData.orders[orderIndex];
+                        if (order.status === 'ready') {
+                            order.status = 'given';
+                            pvzData.stats.givenToday++;
+                            pvzData.stats.totalMoney += order.total;
+                            result = { success: true, message: `🎁 Выдан заказ ${order.id} (${order.customer})`, type: 'give' };
+                        } else {
+                            result = { success: false, message: `❌ Заказ ${order.id} уже выдан`, type: 'error' };
+                        }
+                    } else {
+                        const stockIndex = pvzData.stock.findIndex(i => i.barcode === code);
+                        if (stockIndex !== -1 && pvzData.stock[stockIndex].quantity > 0) {
+                            const item = pvzData.stock[stockIndex];
+                            item.quantity--;
+                            pvzData.stats.givenToday++;
+                            pvzData.stats.totalMoney += item.price;
+                            result = { success: true, message: `🎁 Выдан со склада: ${item.name}`, type: 'give' };
+                            if (item.quantity === 0) {
+                                pvzData.stock.splice(stockIndex, 1);
+                            }
+                        } else {
+                            result = { success: false, message: `⚠️ Товар с кодом ${code} не найден`, type: 'error' };
+                        }
                     }
                 }
                 
                 saveData();
                 
                 const icon = result.success ? (result.type === 'accept' ? '✅' : '🎁') : '⚠️';
+                const resultClass = result.success ? 'result-success' : 'result-error';
                 lastResultDiv.innerHTML = `
-                    <div class="result-card result-success">
+                    <div class="result-card ${resultClass}">
                         <div class="result-text">${icon} ${result.message}</div>
                         <div style="font-size:10px; color:#6B7280;">${new Date().toLocaleTimeString()}</div>
                     </div>
@@ -515,11 +580,16 @@
                     playSuccessBeep();
                     if (navigator.vibrate) navigator.vibrate(100);
                 } else {
-                    playBeep();
+                    playErrorBeep();
+                    if (navigator.vibrate) navigator.vibrate(200);
                 }
                 
-                phoneStatus.innerHTML = '✅ Сканирование выполнено';
-                setTimeout(() => { phoneStatus.innerHTML = '📷 Камера работает. Наведите на штрихкод'; }, 2000);
+                phoneStatus.innerHTML = result.success ? '✅ Готов!' : '❌ Ошибка';
+                setTimeout(() => {
+                    phoneStatus.innerHTML = scannerMode === "receive" 
+                        ? '📥 Режим ПРИЁМА. Сканируйте товары' 
+                        : '🎁 Режим ВЫДАЧИ. Сканируйте заказы';
+                }, 2000);
             }
             
             async function startScanner() {
@@ -527,20 +597,38 @@
                 phoneStatus.innerHTML = '🔄 Запрос доступа к камере...';
                 try {
                     if (html5QrCode) { try { await html5QrCode.stop(); } catch(e) {} }
+                    
                     html5QrCode = new Html5Qrcode("reader");
+                    
+                    // УЛУЧШЕННЫЕ НАСТРОЙКИ ДЛЯ ЛУЧШЕГО РАСПОЗНАВАНИЯ
+                    const config = {
+                        fps: 20,                        // больше кадров в секунду
+                        qrbox: { width: 350, height: 250 },  // УВЕЛИЧЕННАЯ область сканирования
+                        aspectRatio: 4/3,
+                        videoConstraints: {
+                            facingMode: "environment",
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 }
+                        }
+                    };
+                    
                     await html5QrCode.start(
                         { facingMode: "environment" },
-                        { fps: 15, qrbox: { width: 280, height: 200 }, aspectRatio: 4/3 },
+                        config,
                         (decodedText) => { if (decodedText) processScan(decodedText); },
-                        () => {}
+                        (errorMessage) => { /* игнорируем ошибки сканирования */ }
                     );
+                    
                     isScanning = true;
                     startBtn.innerHTML = '⏹️ Остановить';
-                    phoneStatus.innerHTML = '✅ Камера работает. Наведите на штрихкод';
+                    phoneStatus.innerHTML = scannerMode === "receive" 
+                        ? '📥 Режим ПРИЁМА. Наведите камеру на штрихкод' 
+                        : '🎁 Режим ВЫДАЧИ. Наведите камеру на штрихкод';
                     phoneStatus.style.color = '#4ADE80';
+                    
                 } catch(err) {
-                    phoneStatus.innerHTML = '❌ Ошибка доступа к камере';
                     console.error(err);
+                    phoneStatus.innerHTML = '❌ Ошибка доступа к камере. Разрешите доступ';
                 }
             }
             
@@ -557,7 +645,7 @@
             startBtn.onclick = () => isScanning ? stopScanner() : startScanner();
         }
 
-        // ========== РЕЖИМ ПК ==========
+        // ========== ПК ==========
         function initPCMode() {
             loadData();
             renderAllPC();
@@ -640,21 +728,22 @@
         }
         
         function updateStatsPC() {
-            document.getElementById('acceptedToday').innerText = pvzData.stats.acceptedToday || 0;
-            document.getElementById('givenToday').innerText = pvzData.stats.givenToday || 0;
+            document.getElementById('acceptedCount').innerText = pvzData.stats.acceptedToday || 0;
+            document.getElementById('givenCount').innerText = pvzData.stats.givenToday || 0;
             document.getElementById('pendingCount').innerText = pvzData.pendingItems.length;
+            document.getElementById('stockCount').innerText = pvzData.stock.reduce((sum, i) => sum + i.quantity, 0);
         }
         
         window.acceptItemPC = function(id) {
             const item = pvzData.pendingItems.find(i => i.id === id);
             if (item) {
                 pvzData.pendingItems = pvzData.pendingItems.filter(i => i.id !== id);
-                pvzData.stock.push({ ...item, status: 'ready' });
+                pvzData.stock.push({ ...item });
                 pvzData.stats.acceptedToday += item.quantity;
                 saveData();
                 renderAllPC();
                 playSuccessBeep();
-                showToast(`✅ ${item.name} принят`);
+                showToastPC(`✅ ${item.name} принят`);
             }
         };
         
@@ -667,7 +756,7 @@
                 saveData();
                 renderAllPC();
                 playSuccessBeep();
-                showToast(`🎁 Заказ ${orderId} выдан`);
+                showToastPC(`🎁 Заказ ${orderId} выдан`);
             }
         };
         
@@ -675,17 +764,17 @@
         
         function acceptAllPC() {
             pvzData.pendingItems.forEach(item => {
-                pvzData.stock.push({ ...item, status: 'ready' });
+                pvzData.stock.push({ ...item });
                 pvzData.stats.acceptedToday += item.quantity;
             });
             pvzData.pendingItems = [];
             saveData();
             renderAllPC();
             playSuccessBeep();
-            showToast(`✅ Принято всё`);
+            showToastPC(`✅ Принято всё`);
         }
         
-        function showToast(msg) {
+        function showToastPC(msg) {
             const toast = document.createElement('div');
             toast.innerText = msg;
             toast.style.position = 'fixed';
@@ -704,8 +793,8 @@
         
         document.getElementById('acceptAllBtn').onclick = acceptAllPC;
 
-        // ========== ПЕРЕКЛЮЧЕНИЕ РЕЖИМА ==========
-        function toggleMode() {
+        // ========== ПЕРЕКЛЮЧЕНИЕ ==========
+        function toggleDeviceMode() {
             if (document.body.classList.contains('phone-mode')) {
                 document.body.classList.remove('phone-mode');
                 document.body.classList.add('pc-mode');
@@ -719,9 +808,8 @@
             }
         }
         
-        window.toggleMode = toggleMode;
+        window.toggleDeviceMode = toggleDeviceMode;
         
-        // Запуск
         const savedMode = localStorage.getItem('ozon_mode');
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         if (savedMode === 'pc' && !isMobile) {
